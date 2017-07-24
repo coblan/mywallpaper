@@ -61,12 +61,28 @@
 
 			<div data-page="home" class="page no-navbar">
 				<!-- Scrollable page content-->
-				<div class="page-content _no_bottom no_top">
+				<div class="page-content _no_bottom no_top pull-to-refresh-content infinite-scroll">
 
-					<div id="image_list" class="image-list">
-						<img v-for="image in image_list" :src="image.thumb_url" alt=""
-								@click="open_swiper(image)"/>
+					<div class="pull-to-refresh-layer">
+						<div class="preloader"></div>
+						<div class="pull-to-refresh-arrow"></div>
 					</div>
+
+
+					<div>
+						<div id="image_list" class="image-list">
+
+							<img v-for="image in image_list" :src="image.thumb_url" alt=""
+								 @click="open_swiper(image)"/>
+
+						</div>
+
+						<div class="infinite-scroll-preloader">
+							<div class="preloader"></div>
+						</div>
+					</div>
+
+
 
 
 					<div class="popup popup-swiper">
@@ -111,28 +127,60 @@
 
 <script>
 url='http://d2-wallpaperv3.ticktockapps.com/res/image/all/1?app=wallhd-10000&device=iPhone8%2C1&devicesize=750x1334&ios=9.2.1&thumb=305x543&version=4.6'
+url_obj={
+	pre:'http://d2-wallpaperv3.ticktockapps.com/res/image/all/',
+	page:1,
+	suf:'?app=wallhd-10000&device=iPhone8%2C1&devicesize=750x1334&ios=9.2.1&thumb=305x543&version=4.6',
+}
+var image_list=[]
+var has_next_page=true
+
+function load_more(callback){
+	var real_url=url_obj.pre+url_obj.page+url_obj.suf
+	var prox_url='/proxy?url='+encodeURIComponent(real_url)
+	var timer = setTimeout(callback,15*1000)
+	$.get(prox_url,function(resp){
+		clearTimeout(timer)
+		var new_image_list=resp.images
+		console.log('loaded....')
+		for(var i=0;i<new_image_list.length;i++){
+			new_image_list[i].loaded=false
+			image_list.push(new_image_list[i])
+		}
+
+
+
+		if(new_image_list.length<72){
+			has_next_page=false
+		}else{
+			has_next_page=true
+		}
+		if(callback){
+			callback(new_image_list)
+		}
+
+
+	})
+}
 
 $(function(){
-	var image_list=[]
-	function load_more(){
-		var prox_url='/proxy?url='+encodeURIComponent(url)
-		$.get(prox_url,function(resp){
-			var new_image_list=resp.images
-			for(var i=0;i<new_image_list.length;i++){
-				new_image_list[i].loaded=false
-				image_list.push(new_image_list[i])
 
-			}
-		})
-	}
 	list_manager=new Vue({
 		el:'#image_list',
 		data:{
 			image_list:image_list,
 		},
+		computed:{
+			has_next_page:function(){
+				return true
+			},
+		},
 		methods:{
 			load_more:function(){
 				load_more()
+			},
+			load_next_page:function(){
+				alert('load')
 			},
 			open_swiper:function(image){
 				myApp.popup('.popup-swiper')
@@ -523,6 +571,17 @@ $(function(){
 	}
 
 </script>
+<style>
+	.infinite-scroll-preloader {
+		margin-top:20px;
+		margin-bottom: 10px;
+		text-align: center;
+	}
+	.infinite-scroll-preloader .preloader {
+		width:34px;
+		height:34px;
+	}
+</style>
 
 <script>
 
@@ -547,6 +606,35 @@ $(function(){
 	});
 
 	mainView.hideNavbar()
+
+
+	var ptrContent = $$('.pull-to-refresh-content');
+	ptrContent.on('refresh', function (e) {
+		image_list.length=0
+		load_more(function(){
+			myApp.pullToRefreshDone()
+		})
+	})
+
+	var loading = false;
+	$$('.infinite-scroll').on('infinite', function () {
+		if(loading)return
+		loading=true
+
+		if ( !has_next_page) {
+			// Nothing more to load, detach infinite scroll events to prevent unnecessary loadings
+			myApp.detachInfiniteScroll($$('.infinite-scroll'));
+			// Remove preloader
+			$$('.infinite-scroll-preloader').remove();
+			return;
+		}
+
+		url_obj.page+=1
+		load_more(function(){
+			loading=false
+		})
+	})
+
 
 
 	function on_page_switch(page){
