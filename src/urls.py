@@ -15,10 +15,11 @@ Including another URLconf
 """
 from django.conf.urls import url
 from django.contrib import admin
-from wallpaper.views import proxy,home
+from wallpaper.views import proxy,home,proxy_download
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^home/?$',home),
     url(r'^proxy/?$',proxy),
+    url(r'^proxy_download/?$',proxy_download),
 ]

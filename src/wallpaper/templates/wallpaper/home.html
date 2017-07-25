@@ -31,11 +31,17 @@
 <!-- Left panel with reveal effect-->
 <div class="panel panel-left panel-reveal">
 	<div class="content-block">
-		<p>Left panel content goes here</p>
-		<p>Left panel content goes here</p>
-		<p>Left panel content goes here</p>
-		<p>Left panel content goes here</p>
-		<p>Left panel content goes here</p>
+		<div id="category">
+			<p :class="{'active':crt=='daily'}"  @click="open_daily()">Latest Wallpaper</p>
+			<div class="category">
+				<p >Category</p>
+				<p :class="['item',{'active':crt==category.name}]" v-for="category in categorys"  @click="open_category(category.name)">
+					<span v-text="category.name"></span>
+				</p>
+			</div>
+
+		</div>
+
 	</div>
 </div>
 <!-- Right panel with cover effect-->
@@ -99,11 +105,17 @@
 										<span v-if="image.loaded">
 											<img  :src="image.url" alt="" />
 										</span>
-										<div class="swiper-lazy-preloader"></div>
+										<!--<div class="swiper-lazy-preloader"></div>-->
+
 									</span>
 
 								</div>
+							</div>
 
+							<div v-show="show_panel" style="position: fixed;z-index: 99999;bottom: 2em;left: 0;background-color: rgba(255,255,255,0.5);padding: 0.3em 1em;">
+								<i @click="download()" class="fa fa-download fa-2x" aria-hidden="true"></i>
+								<span style="display:inline-block;width: 2em;"></span>
+								<i @click="back_to_list()" class="fa fa-list-ul fa-2x" aria-hidden="true"></i>
 							</div>
 
 						</div>
@@ -128,10 +140,63 @@
 <script>
 url='http://d2-wallpaperv3.ticktockapps.com/res/image/all/1?app=wallhd-10000&device=iPhone8%2C1&devicesize=750x1334&ios=9.2.1&thumb=305x543&version=4.6'
 url_obj={
-	pre:'http://d2-wallpaperv3.ticktockapps.com/res/image/all/',
-	page:1,
-	suf:'?app=wallhd-10000&device=iPhone8%2C1&devicesize=750x1334&ios=9.2.1&thumb=305x543&version=4.6',
+	pre:'',
+	page:0,
+	suf:'',
+	image_list:[],
+	has_next_page:true,
+	categorys:[],
+	set_category:function(cat){
+		this.pre='http://d2-wallpaperv3.ticktockapps.com/res/image/tag/'+cat+'/'
+		this.page=1
+		this.suf='?app=wallhd-10000&device=iPod5%2C1&devicesize=640x1136&ios=8.3&thumb=305x543&version=4.6'
+	},
+	set_daily:function(){
+		this.pre='http://d2-wallpaperv3.ticktockapps.com/res/image/all/'
+		this.page=1
+		this.suf='?app=wallhd-10000&device=iPhone8%2C1&devicesize=750x1334&ios=9.2.1&thumb=305x543&version=4.6'
+	},
+	load_more:function (callback){
+		var self=this
+		var real_url=this.pre+this.page+this.suf
+		var prox_url='/proxy?url='+encodeURIComponent(real_url)
+		var timer = setTimeout(callback,15*1000)
+		$.get(prox_url,function(resp){
+			clearTimeout(timer)
+			var new_image_list=resp.images
+			console.log('loaded....')
+			self.image_list.push.apply(self.image_list,new_image_list)
+//			for(var i=0;i<new_image_list.length;i++){
+//				new_image_list[i].loaded=false
+//				self.image_list.push(new_image_list[i])
+//			}
+			if(new_image_list.length<72){
+				self.has_next_page=false
+			}else{
+				self.has_next_page=true
+			}
+			if(callback){
+				callback(new_image_list)
+			}
+		})
+	},
+	clear:function(){
+		this.image_list.length=0
+	},
+	update_category:function(){
+		var  self=this
+		var url='/proxy?url='+encodeURIComponent('http://d2-wallpaperv3.ticktockapps.com/res/tag/category.json?app=wallhd-10000&device=iPod5%2C1&devicesize=640x1136&ios=8.3&sort=pop&thumb=305x543&version=4.6')
+		$.get(url,function(resp){
+			self.categorys.length=0
+			self.categorys.push.apply(self.categorys,resp.data[1].categories)
+		})
+	}
+
 }
+url_obj.set_daily()
+url_obj.update_category()
+url_obj.load_more()
+
 var image_list=[]
 var has_next_page=true
 
@@ -143,13 +208,11 @@ function load_more(callback){
 		clearTimeout(timer)
 		var new_image_list=resp.images
 		console.log('loaded....')
-		for(var i=0;i<new_image_list.length;i++){
-			new_image_list[i].loaded=false
-			image_list.push(new_image_list[i])
-		}
-
-
-
+		image_list.push.apply(image_list,new_image_list)
+//		for(var i=0;i<new_image_list.length;i++){
+//			new_image_list[i].loaded=false
+//			image_list.push(new_image_list[i])
+//		}
 		if(new_image_list.length<72){
 			has_next_page=false
 		}else{
@@ -158,79 +221,149 @@ function load_more(callback){
 		if(callback){
 			callback(new_image_list)
 		}
-
-
 	})
 }
 
 $(function(){
+category_manager=new Vue({
+	el:'#category',
+	data:{
+		categorys:url_obj.categorys,
+		crt:'daily',
+	},
 
+	mounted:function(){
+//		var self=this
+//		url_obj.get_category(function(categorys){
+//			self.categorys=categorys
+//		})
+//		var  self=this
+//		var url='/proxy?url='+encodeURIComponent(url_obj.category)
+//		$.get(url,function(resp){
+//			self.categorys=resp.data[1].categories
+//
+//		})
+	},
+	methods:{
+		open_category:function(cat){
+			this.crt=cat
+			url_obj.clear()
+			url_obj.set_category(cat)
+			show_load()
+			url_obj.load_more(function(){
+				hide_load()
+			})
+		},
+		open_daily:function(){
+			this.crt='daily'
+			url_obj.clear()
+			url_obj.set_daily()
+			show_load()
+			url_obj.load_more(function(){
+				hide_load()
+			})
+		}
+	}
+})
+
+mySwiper=null
 	list_manager=new Vue({
 		el:'#image_list',
 		data:{
-			image_list:image_list,
+			image_list:url_obj.image_list,
 		},
 		computed:{
 			has_next_page:function(){
-				return true
+				return url_obj.has_next_page
 			},
 		},
 		methods:{
 			load_more:function(){
-				load_more()
+				url_obj.load_more()
 			},
 			load_next_page:function(){
 				alert('load')
 			},
 			open_swiper:function(image){
+				var self=this
 				myApp.popup('.popup-swiper')
-				var index=image_list.indexOf(image)
-				var mySwiper = myApp.swiper('.swiper-container', {
-					speed: 400,
-					spaceBetween: 20,
-					initialSlide:index,
-					preloadImages:false,
-					lazyLoading: true,
-					onLazyImageLoad:function(swiper, slide, image){
-						show_load()
+				var index=this.image_list.indexOf(image)
+				if(mySwiper){
+					mySwiper.update(true)
+					mySwiper.slideTo(index,0)
+				}else{
+					mySwiper = myApp.swiper('.swiper-container', {
+						speed: 400,
+						spaceBetween: 20,
+						initialSlide:index,
+						preloadImages:false,
+						lazyLoading: true,
+						onLazyImageLoad:function(swiper, slide, image){
+							show_load()
 //						console.log('start')
-					},
-					onLazyImageReady:function(swiper, slide, image){
-						hide_load(200)
-						var img_index= swiper.activeIndex
-						image_list[img_index].loaded=true
+						},
+						onLazyImageReady:function(swiper, slide, image){
+							hide_load(200)
+							var img_index= swiper.activeIndex
+							self.image_list[img_index].loaded=true
 //						console.log('end')
 
-					}
-				});
+						},
+						onSlideNextEnd:function(swiper){
+							if(swiper.activeIndex >self.image_list.length-2){
+								url_obj.load_more(function(){
+									Vue.nextTick(function(){
+										swiper.update(true)
+									})
+
+								})
+							}
+						}
+					});
+				}
+
 			}
 		}
 	})
 
-	swiper=new Vue({
+	swiper_manager=new Vue({
 		el:'#swiper',
 		data:{
-			image_list:image_list,
+			image_list:url_obj.image_list,
+			show_panel:false,
 		},
 		mounted:function(){
 
 		},
 		methods:{
 			toggle_panel:function(){
+				this.show_panel = !this.show_panel
+//				myApp.closeModal('.popup-swiper')
+			},
+			download:function(){
+				var img_index= mySwiper.activeIndex
+				var url = image_list[img_index].url
+				location='/proxy_download?url='+encodeURIComponent(url)
+			},
+			back_to_list:function(){
 				myApp.closeModal('.popup-swiper')
 			}
 		}
 	})
 
-	Vue.nextTick(function(){
-		list_manager.load_more()
-
-
-	})
+//	Vue.nextTick(function(){
+//		list_manager.load_more()
+//	})
 })
 
 </script>
 <style>
+	#category p.active{
+		background-color: white;
+	}
+	.category .item{
+		padding-left: 1em;
+	}
 	.image-list{
 		display: flex;
 		flex-wrap:wrap;
@@ -527,6 +660,7 @@ $(function(){
 		right:0;
 		bottom: 0;
 		z-index:999000;
+		pointer-events: none;
 	}
 	.hide{
 		display: none;
