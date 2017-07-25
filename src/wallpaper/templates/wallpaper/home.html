@@ -342,8 +342,11 @@ mySwiper=null
 			},
 			download:function(){
 				var img_index= mySwiper.activeIndex
-				var url = image_list[img_index].url
-				location='/proxy_download?url='+encodeURIComponent(url)
+				var url = url_obj.image_list[img_index].url
+//				var url ='/proxy_download?url='+encodeURIComponent(url)
+				var domstr=ex.template('<a href="{url}" download="{name}">Download</a>',{url:url,name:'downloadedfile'})
+				$(domstr)[0].click();
+//				location='/proxy_download?url='+encodeURIComponent(url)
 			},
 			back_to_list:function(){
 				myApp.closeModal('.popup-swiper')
