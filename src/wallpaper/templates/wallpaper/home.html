@@ -32,6 +32,13 @@
 <div class="panel panel-left panel-reveal">
 	<div class="content-block">
 		<div id="category">
+			<div style="position: relative;">
+				<div v-if="is_fullscreen" @click="exit_fullscreen()" style="display: inline-block;">
+					<img style="width: 3em;" src="/static/image/exit_full.png" alt=""/></div>
+				<div v-else @click="fullscreen()" style="display: inline-block;">
+					<img style="width: 3em;" src="/static/image/full.png" alt=""/></div>
+			</div>
+
 			<p :class="{'active':crt=='daily'}"  @click="open_daily()">Latest Wallpaper</p>
 			<div class="category">
 				<p >Category</p>
@@ -182,6 +189,9 @@ url_obj={
 	},
 	clear:function(){
 		this.image_list.length=0
+//		myApp.attachInfiniteScroll('.infinite-scroll')
+//		$$('.infinite-scroll-preloader').removeClass('hide');
+
 	},
 	update_category:function(){
 		var  self=this
@@ -197,71 +207,49 @@ url_obj.set_daily()
 url_obj.update_category()
 url_obj.load_more()
 
-var image_list=[]
-var has_next_page=true
-
-function load_more(callback){
-	var real_url=url_obj.pre+url_obj.page+url_obj.suf
-	var prox_url='/proxy?url='+encodeURIComponent(real_url)
-	var timer = setTimeout(callback,15*1000)
-	$.get(prox_url,function(resp){
-		clearTimeout(timer)
-		var new_image_list=resp.images
-		console.log('loaded....')
-		image_list.push.apply(image_list,new_image_list)
-//		for(var i=0;i<new_image_list.length;i++){
-//			new_image_list[i].loaded=false
-//			image_list.push(new_image_list[i])
-//		}
-		if(new_image_list.length<72){
-			has_next_page=false
-		}else{
-			has_next_page=true
-		}
-		if(callback){
-			callback(new_image_list)
-		}
-	})
-}
-
 $(function(){
 category_manager=new Vue({
 	el:'#category',
 	data:{
 		categorys:url_obj.categorys,
 		crt:'daily',
+		is_fullscreen:false,
 	},
 
-	mounted:function(){
-//		var self=this
-//		url_obj.get_category(function(categorys){
-//			self.categorys=categorys
-//		})
-//		var  self=this
-//		var url='/proxy?url='+encodeURIComponent(url_obj.category)
-//		$.get(url,function(resp){
-//			self.categorys=resp.data[1].categories
-//
-//		})
-	},
 	methods:{
 		open_category:function(cat){
 			this.crt=cat
 			url_obj.clear()
 			url_obj.set_category(cat)
 			show_load()
-			url_obj.load_more(function(){
-				hide_load()
+			Vue.nextTick(function(){
+				url_obj.load_more(function(){
+					hide_load()
+					$('.infinite-scroll').scrollTop(0)
+				})
 			})
+
 		},
 		open_daily:function(){
 			this.crt='daily'
 			url_obj.clear()
 			url_obj.set_daily()
 			show_load()
-			url_obj.load_more(function(){
-				hide_load()
+			Vue.nextTick(function(){
+				url_obj.load_more(function(){
+					hide_load()
+					$('.infinite-scroll').scrollTop(0)
+				})
 			})
+
+		},
+		fullscreen:function(){
+			fullScreen()
+			this.is_fullscreen=true
+		},
+		exit_fullscreen:function(){
+			exitFullScreen()
+			this.is_fullscreen=false
 		}
 	}
 })
@@ -286,6 +274,9 @@ mySwiper=null
 			},
 			open_swiper:function(image){
 				var self=this
+				state_stack.push(function(){
+					swiper_manager.back_to_list()
+				})
 				myApp.popup('.popup-swiper')
 				var index=this.image_list.indexOf(image)
 				if(mySwiper){
@@ -362,7 +353,7 @@ mySwiper=null
 </script>
 <style>
 	#category p.active{
-		background-color: white;
+		background-color: #d1edfc;
 	}
 	.category .item{
 		padding-left: 1em;
@@ -593,15 +584,49 @@ mySwiper=null
 		}
 	}
 
-	add_history()
+	function cus_close(){
+		window.opener=null;
+		window.open('','_self');
+		window.close();
+	}
+//	add_history()
+	init_page()
+
+
+	quit_ready=false
+	function info_quit(){
+
+		if(quit_ready){
+			cus_close()
+		}else{
+			myApp.addNotification({
+				title: 'warning',
+				message: 'back one more time to quit App!',
+				hold:3000,
+				closeIcon:false,
+				additionalClass:'bottom_msg',
+			});
+			quit_ready=true
+
+			setTimeout(function(){
+				quit_ready=false
+			},3000)
+		}
+	}
 
 	window.addEventListener('popstate', function (e) {
+
+		if(mainView.history.length==1 && state_stack.length==0){
+			info_quit()
+		}
+
 		var state= e.state
 		if(state.count<1){
 			add_history()
 		}
 		if(state_stack.length<=0){
 			mainView.router.back()
+
 		}else{
 			var real_state= state_stack.pop()
 			if(typeof(real_state) === 'function'){
@@ -648,6 +673,7 @@ mySwiper=null
 </script>
 
 <style>
+	.notifications .bottom_msg {top: 70vh; }
 	body.start{
 		opacity: 0;
 	}
@@ -707,6 +733,41 @@ mySwiper=null
 		},time)
 	}
 
+
+	function fullScreen() {
+		var el = document.documentElement;
+		var rfs = el.requestFullScreen || el.webkitRequestFullScreen ||
+				el.mozRequestFullScreen || el.msRequestFullScreen;
+		if(typeof rfs != "undefined" && rfs) {
+			rfs.call(el);
+		} else if(typeof window.ActiveXObject != "undefined") {
+			//for IE，这里其实就是模拟了按下键盘的F11，使浏览器全屏
+			var wscript = new ActiveXObject("WScript.Shell");
+			if(wscript != null) {
+				wscript.SendKeys("{F11}");
+			}
+		}
+	}
+	function exitFullScreen() {
+		var el = document;
+		var cfs = el.cancelFullScreen || el.webkitCancelFullScreen ||
+				el.mozCancelFullScreen || el.exitFullScreen;
+		if(typeof cfs != "undefined" && cfs) {
+			cfs.call(el);
+		} else if(typeof window.ActiveXObject != "undefined") {
+			//for IE，这里和fullScreen相同，模拟按下F11键退出全屏
+			var wscript = new ActiveXObject("WScript.Shell");
+			if(wscript != null) {
+				wscript.SendKeys("{F11}");
+			}
+		}
+	}
+//	$(function(){
+//		var domstr='<button onclick="fullScreen()">Download</button>'
+//		$(domstr)[0].click();
+//
+////		fullScreen()
+//	})
 </script>
 <style>
 	.infinite-scroll-preloader {
@@ -717,6 +778,9 @@ mySwiper=null
 	.infinite-scroll-preloader .preloader {
 		width:34px;
 		height:34px;
+	}
+	.hide{
+		display: none;
 	}
 </style>
 
@@ -748,7 +812,7 @@ mySwiper=null
 	var ptrContent = $$('.pull-to-refresh-content');
 	ptrContent.on('refresh', function (e) {
 		image_list.length=0
-		load_more(function(){
+		url_obj.load_more(function(){
 			myApp.pullToRefreshDone()
 		})
 	})
@@ -757,17 +821,20 @@ mySwiper=null
 	$$('.infinite-scroll').on('infinite', function () {
 		if(loading)return
 		loading=true
-
-		if ( !has_next_page) {
+		console.log('infinite load')
+		if ( !url_obj.has_next_page) {
 			// Nothing more to load, detach infinite scroll events to prevent unnecessary loadings
-			myApp.detachInfiniteScroll($$('.infinite-scroll'));
+//			myApp.detachInfiniteScroll($$('.infinite-scroll'));
 			// Remove preloader
-			$$('.infinite-scroll-preloader').remove();
+			$$('.infinite-scroll-preloader').addClass('hide');
+			loading=false
 			return;
+		}else{
+			$$('.infinite-scroll-preloader').removeClass('hide');
 		}
 
 		url_obj.page+=1
-		load_more(function(){
+		url_obj.load_more(function(){
 			loading=false
 		})
 	})
@@ -793,31 +860,6 @@ mySwiper=null
 			on_page_switch(page)
 		}
 
-//        if(page.name=='home'){
-//            home_init()
-//        }
-
-//        if (page.name.startsWith('iframe_')) {
-//
-//            $(page.view.activePage.container).find('.page-content').addClass('_no_bottom')
-//
-//            setTimeout(function(){
-//                var el=$('.page-on-center').find('.iframe_wraper')
-//                var data = el.attr('data-src')
-//                el.attr('src',data)
-//                show_load(10*1000)
-//            },500)
-//        }else if(page.name=='home'){
-//            new Vue({
-//                el:'#there',
-//                data:{
-//                    menu:menu,
-//
-//                },
-//                methods:{
-//                }
-//            })
-//        }
 	})
 </script>
 
