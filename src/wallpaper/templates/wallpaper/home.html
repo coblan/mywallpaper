@@ -166,7 +166,7 @@ url_obj={
 	load_more:function (callback){
 		var self=this
 		var real_url=this.pre+this.page+this.suf
-		var prox_url='/proxy?url='+encodeURIComponent(real_url)
+		var prox_url= real_url //'/proxy?url='+encodeURIComponent(real_url)
 		var timer = setTimeout(callback,15*1000)
 		$.get(prox_url,function(resp){
 			clearTimeout(timer)
