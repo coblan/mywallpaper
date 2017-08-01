@@ -160,10 +160,10 @@
 if(window.java_obj){
 	var now = Date.now()
 	var elapse= now- java_obj.getStartTimestamp()
-	if(elapse>4000){
+	if(elapse>2000){
 		var delay=0
 	}else{
-		var delay=4000-elapse
+		var delay=2000-elapse
 	}
 	setTimeout(function(){
 		java_obj.contentShow()
