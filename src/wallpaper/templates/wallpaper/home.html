@@ -14,11 +14,16 @@
 	<link rel="stylesheet" href="/static/lib/framework7/framework7.ios.colors.min.css">
 	<!-- Path to your custom app styles-->
 	<!--<link rel="stylesheet" href="css/my-app.css">-->
+
+	<script src="{% static 'lib/screenfull.min.js' %}"></script>
 	<script src='{% static "js/exfun.js?t="%}{{ stamp.exfun_js }}'></script>
 	<link rel="stylesheet" href="{% static 'lib/weui.min.css' %}">
 	<link rel="stylesheet" href="{% static 'lib/font-awesome4.7/font-awesome4.7.min.css' %}">
 	<script src="{% static 'lib/vue2.3.2.js' %}"></script>
 	<script src="{% static 'js/uis_mb.pack.js?t=' %}{{ stamp.uis_mb_pack_js }}"></script>
+
+
+	<script src="{% static 'wallpaper/wallpaper.pack.js?t=' %}{{ stamp.wallpaper_js }}"></script>
 </head>
 
 
@@ -145,73 +150,32 @@
 </div>
 
 <script>
-url='http://d2-wallpaperv3.ticktockapps.com/res/image/all/1?app=wallhd-10000&device=iPhone8%2C1&devicesize=750x1334&ios=9.2.1&thumb=305x543&version=4.6'
-url_obj={
-	pre:'',
-	page:0,
-	suf:'',
-	image_list:[],
-	has_next_page:true,
-	categorys:[],
-	set_category:function(cat){
-		this.pre='http://d2-wallpaperv3.ticktockapps.com/res/image/tag/'+cat+'/'
-		this.page=1
-		this.suf='?app=wallhd-10000&device=iPod5%2C1&devicesize=640x1136&ios=8.3&thumb=305x543&version=4.6'
-	},
-	set_daily:function(){
-		this.pre='http://d2-wallpaperv3.ticktockapps.com/res/image/all/'
-		this.page=1
-		this.suf='?app=wallhd-10000&device=iPhone8%2C1&devicesize=750x1334&ios=9.2.1&thumb=305x543&version=4.6'
-	},
-	load_more:function (callback){
-		var self=this
-		var real_url=this.pre+this.page+this.suf
-		var prox_url= real_url //'/proxy?url='+encodeURIComponent(real_url)
-		var timer = setTimeout(callback,15*1000)
-		$.get(prox_url,function(resp){
-			clearTimeout(timer)
-			var new_image_list=resp.images
-			console.log('loaded....')
-			self.image_list.push.apply(self.image_list,new_image_list)
-//			for(var i=0;i<new_image_list.length;i++){
-//				new_image_list[i].loaded=false
-//				self.image_list.push(new_image_list[i])
-//			}
-			if(new_image_list.length<72){
-				self.has_next_page=false
-			}else{
-				self.has_next_page=true
-			}
-			if(callback){
-				callback(new_image_list)
-			}
-		})
-	},
-	clear:function(){
-		this.image_list.length=0
-//		myApp.attachInfiniteScroll('.infinite-scroll')
-//		$$('.infinite-scroll-preloader').removeClass('hide');
+	var image_manager=new data.ImageManager()
+	image_manager.load_more()
 
-	},
-	update_category:function(){
-		var  self=this
-		var url='/proxy?url='+encodeURIComponent('http://d2-wallpaperv3.ticktockapps.com/res/tag/category.json?app=wallhd-10000&device=iPod5%2C1&devicesize=640x1136&ios=8.3&sort=pop&thumb=305x543&version=4.6')
-		$.get(url,function(resp){
-			self.categorys.length=0
-			self.categorys.push.apply(self.categorys,resp.data[1].categories)
-		})
+	var category_manager=new data.CategoryManager()
+	category_manager.update()
+
+
+if(window.java_obj){
+	var now = Date.now()
+	var elapse= now- java_obj.getStartTimestamp()
+	if(elapse>4000){
+		var delay=0
+	}else{
+		var delay=4000-elapse
 	}
+	setTimeout(function(){
+		java_obj.contentShow()
+	},delay)
 
 }
-url_obj.set_daily()
-url_obj.update_category()
-url_obj.load_more()
 
 $(function(){
-category_manager=new Vue({
+category_vue=new Vue({
 	el:'#category',
 	data:{
-		categorys:url_obj.categorys,
+		categorys:category_manager.categorys,
 		crt:'daily',
 		is_fullscreen:false,
 	},
@@ -219,24 +183,24 @@ category_manager=new Vue({
 	methods:{
 		open_category:function(cat){
 			this.crt=cat
-			url_obj.clear()
-			url_obj.set_category(cat)
+			image_manager.clear()
+			image_manager.url_obj.set_category(cat)
 			show_load()
-			Vue.nextTick(function(){
-				url_obj.load_more(function(){
+			setTimeout(function(){
+				image_manager.load_more(function(){
 					hide_load()
 					$('.infinite-scroll').scrollTop(0)
 				})
-			})
+			},200)
 
 		},
 		open_daily:function(){
 			this.crt='daily'
-			url_obj.clear()
-			url_obj.set_daily()
+			image_manager.clear()
+			image_manager.url_obj.set_daily()
 			show_load()
 			Vue.nextTick(function(){
-				url_obj.load_more(function(){
+				image_manager.load_more(function(){
 					hide_load()
 					$('.infinite-scroll').scrollTop(0)
 				})
@@ -244,30 +208,36 @@ category_manager=new Vue({
 
 		},
 		fullscreen:function(){
-			fullScreen()
-			this.is_fullscreen=true
+//			fullScreen()
+			screenfull.request();
+//			this.is_fullscreen=true
+
 		},
 		exit_fullscreen:function(){
-			exitFullScreen()
-			this.is_fullscreen=false
+			screenfull.exit()
+//			exitFullScreen()
+//			this.is_fullscreen=false
 		}
 	}
 })
+	screenfull.on('change',function(){
+		category_vue.is_fullscreen= screenfull.isFullscreen
+	})
 
 mySwiper=null
 	list_manager=new Vue({
 		el:'#image_list',
 		data:{
-			image_list:url_obj.image_list,
+			image_list:image_manager.image_list,
 		},
 		computed:{
 			has_next_page:function(){
-				return url_obj.has_next_page
+				return image_manager.has_next_page
 			},
 		},
 		methods:{
 			load_more:function(){
-				url_obj.load_more()
+				image_manager.load_more()
 			},
 			load_next_page:function(){
 				alert('load')
@@ -302,7 +272,7 @@ mySwiper=null
 						},
 						onSlideNextEnd:function(swiper){
 							if(swiper.activeIndex >self.image_list.length-2){
-								url_obj.load_more(function(){
+								image_manager.load_more(function(){
 									Vue.nextTick(function(){
 										swiper.update(true)
 									})
@@ -320,7 +290,7 @@ mySwiper=null
 	swiper_manager=new Vue({
 		el:'#swiper',
 		data:{
-			image_list:url_obj.image_list,
+			image_list:image_manager.image_list,
 			show_panel:false,
 		},
 		mounted:function(){
@@ -333,7 +303,7 @@ mySwiper=null
 			},
 			download:function(){
 				var img_index= mySwiper.activeIndex
-				var url = url_obj.image_list[img_index].url
+				var url = image_manager.image_list[img_index].url
 //				var url ='/proxy_download?url='+encodeURIComponent(url)
 				var domstr=ex.template('<a href="{url}" download="{name}">Download</a>',{url:url,name:'downloadedfile'})
 				$(domstr)[0].click();
@@ -370,6 +340,12 @@ mySwiper=null
 	}
 	#swiper img{
 		width: 100vw;
+		/*height: 100vh;*/
+		margin: auto;
+	}
+	#swiper .swiper-slide{
+		text-align: center;
+		height: 100vh;
 	}
 </style>
 
@@ -377,201 +353,9 @@ mySwiper=null
 <script type="text/javascript" src="/static/lib/framework7/framework7.min.js"></script>
 
 
-<style type="text/css">
-	.pad{
-		background-color: white;
-		margin-top: 20px;
-	}
-	.nav .fake-active>i,.nav .fake-active>p{
-		color: green;
-
-	}
-	p.weui-tabbar__label{
-		margin: 0.2em;
-	}
-	.page-content{
-		z-index: auto;
-	}
-
-	.page-content._no_bottom{
-		padding-bottom: 0;
-	}
-	.page-content.no_top{
-		padding-top: 0;
-	}
-	.iframe_wraper.full-screen{
-		position: fixed;
-		top:0;
-		left:0;
-		bottom: 0;
-		right: 0;
-		z-index: 5000;
-		margin: 0;
-		padding: 0;
-	}
-	.navbar-custom{
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100vw;
-		padding: 0.5em 0.8em;
-	}
-	.navbar-custom .left,.navbar-custom .right{
-		min-width: 3em;
-	}
-	.page-cus .page-content{
-		padding-top: 0;
-		margin-top: 3em;
-	}
-</style>
-
-<script id="iframe-template" type="text/template">
-
-	<!-- We don't need full layout here, because this page will be parsed with Ajax-->
-	<!-- Top Navbar-->
-	<div class="navbar">
-		<div class="navbar-inner">
-			<div class="left"><a href="#" class="back link"> <i class="icon icon-back"></i><span>返回</span></a></div>
-			<div class="center"><span style="color: #999999">加载...</span></div>
-			<div class="right pop-menu" style="visibility: hidden;">
-				<!-- Right link contains only icon - additional "icon-only" class-->
-				<a href="#" class="link icon-only"> <i class="icon icon-bars"></i></a>
-			</div>
-		</div>
-	</div>
-	<div class="pages">
-		<!-- Page, data-page contains page name-->
-		<div data-page="{name}" class="page page-cus">
-			<!-- Scrollable page content-->
-			<!--<div class="navbar-custom flex">-->
-			<!--<div class="left" onclick="back()"><span class="back link"> <i class="fa fa-chevron-left" aria-hidden="true" style="font-size: 1.5em;"></i></span></div>-->
-			<!--<div class="center flex-grow" style="text-align: center;font-weight: 700;">jjss</div>-->
-			<!--<div class="right pop-menu flex-shrink" style="visibility: hidden;">-->
-			<!--&lt;!&ndash; Right link contains only icon - additional "icon-only" class&ndash;&gt;-->
-			<!--<a href="#" class="link icon-only"> <i class="icon icon-bars"></i></a>-->
-			<!--</div>-->
-			<!--</div>-->
-
-			<div class="page-content iframe_content "></div>
-		</div>
-	</div>
-</script>
-
 
 <script>
 
-	function load_iframe(url,name){
-		show_load()
-		var html = $('#iframe-template').html()
-
-		html=ex.template(html,{name:name,url:url})
-		mainView.router.loadContent(html)
-
-		if(mainView.history.length>2){
-			mainView.showNavbar()
-		}else{
-			// 在第二个页面，先隐藏住navbar，500毫秒后，再显示。
-			mainView.hideNavbar()
-			setTimeout(function(){
-				mainView.showNavbar()
-			},500)
-		}
-		setTimeout(function(){
-			var iframe_str = ex.template('<iframe class="iframe_wraper" src="{url}" frameborder="0" width="100%" height="100%"></iframe>',{url:url})
-			$('.temp-cache').html(iframe_str)
-		},200)
-		setTimeout(function(){
-			$('.pages .page').last().find('.page-content.iframe_content').append($('.temp-cache .iframe_wraper'))
-		},300)
-
-	}
-
-	//    function load_iframe(url,name){
-	//        var iframe_url='/_f7_iframe?name=iframe_'+name+'&src='+encodeURIComponent(url)
-	//        mainView.router.loadPage(iframe_url)
-	//    }
-
-	function set_title(title){
-		$('.navbar .navbar-inner:last-child .center').html(title)
-	}
-
-	function replace_iframe(str){
-		// 采用新的history后推机制后，这个函数基本无用了。在iframe中直接调用location.replace就可以了。
-		var page_name=$('.page-on-center').attr('data-page')
-		var iframe=$('.page-on-center .iframe_wraper')
-
-		var html = '<iframe class="iframe_wraper" src='+str + ' frameborder="0" width="100%" height="100%" src="/f7/work.wkself.f7"></iframe>'
-		iframe.after(html)
-		iframe.remove();
-		history.replaceState({name:page_name,kind:'page'}, '');
-
-	}
-	function pop_menu(callback){
-		$('.view .navbar .navbar-inner:last-child .pop-menu').css('visibility','visible')
-		if(callback){
-			$('.view .navbar .navbar-inner').last().find('.pop-menu')[0].onclick=callback
-//            $('.view .navbar-custom').last().find('.pop-menu')[0].onclick=callback
-		}
-//        $('.navbar-on-center .pop-menu').css('visibility','visible')
-//        if(callback){
-//            $('.navbar-on-center .pop-menu')[0].onclick=callback
-//        }
-	}
-	function back(callback){
-		if(callback){
-			var last_win= $(mainView.activePage.fromPage.container).find('.iframe_wraper')[0].contentWindow
-			callback(last_win)
-		}
-		mainView.router.back()
-	}
-	function iframe_full_screen(value,second){
-		var second= second || 300
-		if(value){
-			$('.page-on-center .iframe_wraper').addClass('full-screen')
-			$('.toolbar').hide()
-			setTimeout(function(){
-				$('.navbar').hide()
-			},second)
-
-		}else{
-			$('.page-on-center .iframe_wraper').removeClass('full-screen')
-			$('.page-on-center .page-content').addClass('_no_bottom')
-			$('.navbar').show()
-			setTimeout(function(){
-				$('.toolbar').show()
-				$('.page-on-center .page-content').removeClass('_no_bottom')
-			},second)
-		}
-	}
-
-	function show_toolbar(){
-		$('.page-content').removeClass('_no_bottom')
-		$('.toolbar').show()
-	}
-	function hide_toolbar(){
-		$('.toolbar').hide()
-		$('.page-content').addClass('_no_bottom')
-
-	}
-	function show_nav(){
-		mainView.showNavbar()
-		$('.pages .page-content').last().removeClass('_no_top')
-	}
-	function hide_nav(){
-		mainView.hideNavbar()
-		$('.pages .page-content').last().addClass('_no_top')
-	}
-
-	function call_iframe(callback_name){
-		var args=Array.prototype.slice.call(arguments)
-		$('.page-on-center .iframe_wraper')[0].contentWindow[callback_name].apply(this,args.slice(1,args.length))
-	}
-	function add_nav(str){
-		$('.view .navbar .navbar-inner').last().after(str)
-	}
-	function remove_nav(){
-		$('.view .navbar .navbar-inner').last().remove()
-	}
 
 	function init_page(){
 		state_stack=[]
@@ -637,23 +421,7 @@ mySwiper=null
 
 	}, false);
 
-	//    ln.history_handle({
-	////        init:{viewIndex:0},
-	//        handler:function(state){
-	//            if(state.count<1){
-	//                add_history()
-	//            }
-	//            if(state_stack.length<=0){
-	//                mainView.router.back()
-	//            }else{
-	//                var real_state= state_stack.pop()
-	//                if(typeof(real_state) === 'function'){
-	//                    real_state()
-	//                }
-	//            }
-	//            hide_load()
-	//        }
-	//    })
+
 </script>
 
 
@@ -734,34 +502,44 @@ mySwiper=null
 	}
 
 
-	function fullScreen() {
-		var el = document.documentElement;
-		var rfs = el.requestFullScreen || el.webkitRequestFullScreen ||
-				el.mozRequestFullScreen || el.msRequestFullScreen;
-		if(typeof rfs != "undefined" && rfs) {
-			rfs.call(el);
-		} else if(typeof window.ActiveXObject != "undefined") {
-			//for IE，这里其实就是模拟了按下键盘的F11，使浏览器全屏
-			var wscript = new ActiveXObject("WScript.Shell");
-			if(wscript != null) {
-				wscript.SendKeys("{F11}");
-			}
-		}
-	}
-	function exitFullScreen() {
-		var el = document;
-		var cfs = el.cancelFullScreen || el.webkitCancelFullScreen ||
-				el.mozCancelFullScreen || el.exitFullScreen;
-		if(typeof cfs != "undefined" && cfs) {
-			cfs.call(el);
-		} else if(typeof window.ActiveXObject != "undefined") {
-			//for IE，这里和fullScreen相同，模拟按下F11键退出全屏
-			var wscript = new ActiveXObject("WScript.Shell");
-			if(wscript != null) {
-				wscript.SendKeys("{F11}");
-			}
-		}
-	}
+//	function fullScreen() {
+//		var el = document.documentElement;
+//		var rfs = el.requestFullScreen || el.webkitRequestFullScreen ||
+//				el.mozRequestFullScreen || el.msRequestFullScreen;
+//		if(typeof rfs != "undefined" && rfs) {
+//			rfs.call(el);
+//		} else if(typeof window.ActiveXObject != "undefined") {
+//			//for IE，这里其实就是模拟了按下键盘的F11，使浏览器全屏
+//			var wscript = new ActiveXObject("WScript.Shell");
+//			if(wscript != null) {
+//				wscript.SendKeys("{F11}");
+//			}
+//		}
+//	}
+//	function exitFullScreen() {
+//		var el = document;
+//		var cfs = el.cancelFullScreen || el.webkitCancelFullScreen ||
+//				el.mozCancelFullScreen || el.exitFullScreen;
+//		if(typeof cfs != "undefined" && cfs) {
+//			cfs.call(el);
+//		} else if(typeof window.ActiveXObject != "undefined") {
+//			//for IE，这里和fullScreen相同，模拟按下F11键退出全屏
+//			var wscript = new ActiveXObject("WScript.Shell");
+//			if(wscript != null) {
+//				wscript.SendKeys("{F11}");
+//			}
+//		}
+//	}
+
+//	document.addEventListener("fullscreenchange", function( event ) {
+//		console.log('fullscreenchange')
+//		if ( document.fullscreen ){
+//			category_vue.is_fullscreen=true
+//		}else{
+//			category_vue.is_fullscreen=false
+//		}
+//	})
+
 //	$(function(){
 //		var domstr='<button onclick="fullScreen()">Download</button>'
 //		$(domstr)[0].click();
@@ -812,7 +590,7 @@ mySwiper=null
 	var ptrContent = $$('.pull-to-refresh-content');
 	ptrContent.on('refresh', function (e) {
 		image_list.length=0
-		url_obj.load_more(function(){
+		image_manager.load_more(function(){
 			myApp.pullToRefreshDone()
 		})
 	})
@@ -822,7 +600,7 @@ mySwiper=null
 		if(loading)return
 		loading=true
 		console.log('infinite load')
-		if ( !url_obj.has_next_page) {
+		if ( !image_manager.has_next_page) {
 			// Nothing more to load, detach infinite scroll events to prevent unnecessary loadings
 //			myApp.detachInfiniteScroll($$('.infinite-scroll'));
 			// Remove preloader
@@ -833,8 +611,8 @@ mySwiper=null
 			$$('.infinite-scroll-preloader').removeClass('hide');
 		}
 
-		url_obj.page+=1
-		url_obj.load_more(function(){
+//		url_obj.page+=1
+		image_manager.load_more(function(){
 			loading=false
 		})
 	})
