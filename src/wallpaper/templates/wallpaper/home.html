@@ -312,7 +312,8 @@ mySwiper=null
 
 				myApp.addNotification({
 					title: 'Download',
-					message: 'Wallpaper has been download in backend!Find in in your download directory!'
+					message: 'Wallpaper has been download in backend! Find in in your download directory!',
+					additionalClass:'download_msg'
 				});
 			},
 			back_to_list:function(){
@@ -448,6 +449,7 @@ mySwiper=null
 
 <style>
 	.notifications .bottom_msg {top: 70vh; }
+	.notifications .download_msg {top: 50vh; }
 	body.start{
 		opacity: 0;
 	}
