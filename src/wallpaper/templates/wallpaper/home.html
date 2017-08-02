@@ -16,6 +16,7 @@
 	<!--<link rel="stylesheet" href="css/my-app.css">-->
 
 	<script src="{% static 'lib/screenfull.min.js' %}"></script>
+	<!--<script src="{% static 'lib/lazyloader.min.js' %}"></script>-->
 	<script src='{% static "js/exfun.js?t="%}{{ stamp.exfun_js }}'></script>
 	<link rel="stylesheet" href="{% static 'lib/weui.min.css' %}">
 	<link rel="stylesheet" href="{% static 'lib/font-awesome4.7/font-awesome4.7.min.css' %}">
@@ -90,7 +91,7 @@
 					<div>
 						<div id="image_list" class="image-list">
 
-							<img v-for="image in image_list" :src="image.thumb_url" alt=""
+							<img v-for="image in image_list" :data-src="image.thumb_url" class="lazy lazy-fadein no-lazyed" alt=""
 								 @click="open_swiper(image)"/>
 
 						</div>
@@ -111,7 +112,7 @@
 								<div class="swiper-slide" v-for="image in image_list">
 									<span @click="toggle_panel()">
 										<span v-if="!image.loaded">
-											<img  :data-src="image.thumb_url" class="lazy" alt="" />
+											<img  :src="image.thumb_url"  alt="" />
 											<img v-show="false" :data-src="image.url" alt="" class="swiper-lazy"/>
 										</span>
 										<span v-if="image.loaded">
@@ -151,7 +152,17 @@
 
 <script>
 	var image_manager=new data.ImageManager()
-	image_manager.load_more()
+	image_manager.load_more(function(){
+		Vue.nextTick(function(){
+//			setTimeout(function(){
+				$$('img.no-lazyed').trigger('lazy');
+				$$('img.no-lazyed').removeClass('no-lazyed')
+//			},500)
+
+//			$(".mylazy").lazyload();
+		})
+
+	})
 
 	var category_manager=new data.CategoryManager()
 	category_manager.update()
@@ -208,15 +219,11 @@ category_vue=new Vue({
 
 		},
 		fullscreen:function(){
-//			fullScreen()
 			screenfull.request();
-//			this.is_fullscreen=true
 
 		},
 		exit_fullscreen:function(){
 			screenfull.exit()
-//			exitFullScreen()
-//			this.is_fullscreen=false
 		}
 	}
 })
