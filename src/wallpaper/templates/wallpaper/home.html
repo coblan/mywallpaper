@@ -111,7 +111,7 @@
 								<div class="swiper-slide" v-for="image in image_list">
 									<span @click="toggle_panel()">
 										<span v-if="!image.loaded">
-											<img  :src="image.thumb_url" alt="" />
+											<img  :data-src="image.thumb_url" class="lazy" alt="" />
 											<img v-show="false" :data-src="image.url" alt="" class="swiper-lazy"/>
 										</span>
 										<span v-if="image.loaded">
