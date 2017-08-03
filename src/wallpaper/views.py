@@ -2,10 +2,17 @@ from django.shortcuts import render
 from django.http import HttpResponse
 import requests
 import re
+import os
+from helpers.maintenance.update_static_timestamp import get_static_obj,static_file_timestamp_dict,org_static_file_path
 # Create your views here.
+wallpaper_js_path=os.path.join(org_static_file_path,'wallpaper')
+wallpeper_stamp=get_static_obj(wallpaper_js_path)
 
 def home(request):
-    return render(request,'wallpaper/home.html')
+    
+    ctx={'wallpaper_stamp':wallpeper_stamp}
+    ctx['stamp']=static_file_timestamp_dict
+    return render(request,'wallpaper/home.html',context=ctx)
 
 # @cache_control(max_age=settings.HTTP_MAX_AGE)
 # @map_image
