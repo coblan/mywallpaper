@@ -155,21 +155,11 @@
 
 <script>
 	var image_manager=new data.ImageManager()
-	image_manager.load_more(function(){
-//		Vue.nextTick(function(){
-//			setTimeout(function(){
-//				$$('img.no-lazyed').trigger('lazy');
-//				$$('img.no-lazyed').removeClass('no-lazyed')
-//			},2000)
-
-//			$(".mylazy").lazyload();
-//		})
-
-	})
-
 	var category_manager=new data.CategoryManager()
-	category_manager.update()
-
+	$(function(){
+		image_manager.load_more()
+		category_manager.update()
+	})
 
 if(window.java_obj){
 	var now = Date.now()
