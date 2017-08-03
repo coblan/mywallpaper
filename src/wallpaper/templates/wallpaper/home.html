@@ -17,6 +17,7 @@
 
 	<script src="{% static 'lib/screenfull.min.js' %}"></script>
 	<!--<script src="{% static 'lib/lazyloader.min.js' %}"></script>-->
+
 	<script src='{% static "js/exfun.js?t="%}{{ stamp.exfun_js }}'></script>
 	<link rel="stylesheet" href="{% static 'lib/weui.min.css' %}">
 	<link rel="stylesheet" href="{% static 'lib/font-awesome4.7/font-awesome4.7.min.css' %}">
@@ -89,8 +90,10 @@
 
 
 					<div>
-						<div id="image_list" class="image-list">
+						<div id="image_list" class="image-list" style="overflow: scroll;">
 
+							<!--<img v-for="image in image_list" :data-original="image.thumb_url" class="no-lazyed" alt=""-->
+							<!--<img v-for="image in image_list" :src="image.thumb_url"  alt=""-->
 							<img v-for="image in image_list" :data-src="image.thumb_url" class="lazy lazy-fadein no-lazyed" alt=""
 								 @click="open_swiper(image)"/>
 
@@ -153,14 +156,14 @@
 <script>
 	var image_manager=new data.ImageManager()
 	image_manager.load_more(function(){
-		Vue.nextTick(function(){
+//		Vue.nextTick(function(){
 //			setTimeout(function(){
-				$$('img.no-lazyed').trigger('lazy');
-				$$('img.no-lazyed').removeClass('no-lazyed')
-//			},500)
+//				$$('img.no-lazyed').trigger('lazy');
+//				$$('img.no-lazyed').removeClass('no-lazyed')
+//			},2000)
 
 //			$(".mylazy").lazyload();
-		})
+//		})
 
 	})
 
@@ -197,12 +200,12 @@ category_vue=new Vue({
 			image_manager.clear()
 			image_manager.url_obj.set_category(cat)
 			show_load()
-			setTimeout(function(){
+//			setTimeout(function(){
 				image_manager.load_more(function(){
 					hide_load()
 					$('.infinite-scroll').scrollTop(0)
 				})
-			},200)
+//			},200)
 
 		},
 		open_daily:function(){
@@ -331,7 +334,7 @@ mySwiper=null
 
 //	Vue.nextTick(function(){
 //		list_manager.load_more()
-//	})
+//	}) 33.3333vw;   59.344256360655734
 })
 
 </script>
@@ -348,9 +351,9 @@ mySwiper=null
 	}
 	.image-list img{
 		display: block;
-		width: 33.3333vw;
-		height: 59.344256360655734vw;
-		border-radius: 7px;
+		width: calc(100vw /3);
+		height: calc(100vw /3 *(543 /305) );
+		border-radius: 4px;
 	}
 	#swiper img{
 		width: 100vw;
@@ -584,7 +587,7 @@ mySwiper=null
 		modalButtonOk:'好的',
 		modalButtonCancel:'不了',
 		swipePanel:'left',
-
+		imagesLazyLoadThreshold:200,
 
 //        pushState:true,
 //        swipeBackPage:true,

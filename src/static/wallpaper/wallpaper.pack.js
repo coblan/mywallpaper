@@ -178,15 +178,23 @@ var ImageManager = exports.ImageManager = function () {
                 var new_image_list = resp.images;
                 console.log('loaded....');
                 self.image_list.push.apply(self.image_list, new_image_list);
-                //			for(var i=0;i<new_image_list.length;i++){
-                //				new_image_list[i].loaded=false
-                //				self.image_list.push(new_image_list[i])
-                //			}
+
+                //self.image_list.push({"url": "http://d3-wallpaperv3.ticktockapps.com/wallpaper/10313a2aa0acc5b3297e9a3f05f98423-750x1334.jpg", "thumb_url": "http://d3-wallpaperv3.ticktockapps.com/wallpaper/10313a2assss3297e9a3f05f98423-305x543.jpg", "id": 1252344, "likes": 100},)
+
                 if (new_image_list.length < 72) {
                     self.has_next_page = false;
                 } else {
                     self.has_next_page = true;
                 }
+
+                Vue.nextTick(function () {
+                    $$('img.no-lazyed').trigger('lazy');
+                    //$("img.no-lazyed").lazyload({
+                    //    event: "scroll",
+                    //});
+                    $$('img.no-lazyed').removeClass('no-lazyed');
+                });
+
                 if (callback) {
                     callback(new_image_list);
                 }
@@ -195,7 +203,7 @@ var ImageManager = exports.ImageManager = function () {
     }, {
         key: 'clear',
         value: function clear() {
-            this.image_list.length = 0;
+            this.image_list.splice(0, this.image_list.length);
         }
     }]);
 
